@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Villa Availability Checker</title>
+  <style>
+    body { font-family: Arial; padding: 20px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { padding: 10px; border: 1px solid #ccc; text-align: center; }
+    .available { background: #c6f7d0; }
+    .booked { background: #ffbfbf; }
+    input { padding: 8px; width: 200px; }
+  </style>
+</head>
+<body>
+
+  <h2>Villa Availability Checker</h2>
+
+  <label>Select Date: </label>
+  <input type="date" id="dateFilter">
+
+  <table id="availabilityTable">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Season</th>
+        <th>Room A</th>
+        <th>Room B</th>
+        <th>Room C</th>
+        <th>Room D</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    const API_URL = "YOUR_WEB_APP_URL_HERE";
+
+    async function loadData() {
+      const res = await fetch(API_URL);
+      const json = await res.json();
+      renderTable(json.data);
+    }
+
+    function renderTable(data) {
+      const tbody = document.querySelector("#availabilityTable tbody");
+      tbody.innerHTML = "";
+
+      data.forEach(row => {
+        const tr = document.createElement("tr");
+
+        tr.innerHTML = `
+          <td>${row.date}</td>
+          <td>${row.season}</td>
+          <td class="${getClass(row['room a'])}">${row['room a']}</td>
+          <td class="${getClass(row['room b'])}">${row['room b']}</td>
+          <td class="${getClass(row['room c'])}">${row['room c']}</td>
+          <td class="${getClass(row['room d'])}">${row['room d']}</td>
+        `;
+
+        tbody.appendChild(tr);
+      });
+    }
+
+    function getClass(status) {
+      if (!status) return "";
+      return status.toLowerCase().includes("available") ? "available" : "booked";
+    }
+
+    document.getElementById("dateFilter").addEventListener("change", async (e) => {
+      const res = await fetch(API_URL);
+      const json = await res.json();
+      const selected = e.target.value;
+
+      const filtered = json.data.filter(row => row.date.startsWith(selected));
+      renderTable(filtered);
+    });
+
+    loadData();
+  </script>
+
+</body>
+</html>
