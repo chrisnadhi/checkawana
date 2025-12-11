@@ -40,7 +40,7 @@
       </tr>
     </thead>
     <tbody>
-      <tr><td colspan="6">Loading data from Google Sheets...</td></tr>
+      <tr><td colspan="6">Please select your check-in and check-out dates and click "Check Availability".</td></tr>
     </tbody>
   </table>
 
@@ -56,19 +56,17 @@
       try {
         loading.style.display = "inline";
         const res = await fetch(API_URL);
-        
         const json = await res.json();
-        console.log("API Response:", json); 
-
+        
         sheetData = Array.isArray(json) ? json : json.data;
 
         if(!sheetData) {
             console.error("Could not find data array.");
             tbody.innerHTML = "<tr><td colspan='6'>Error loading data format</td></tr>";
-            return;
         }
+        
+        // ❌ REMOVED: The initial call to renderTable(sheetData) has been removed.
 
-        renderTable(sheetData); 
       } catch (error) {
         console.error("Fetch error:", error);
         tbody.innerHTML = "<tr><td colspan='6'>Error connecting to Google Sheet</td></tr>";
@@ -97,14 +95,11 @@
       }
 
       data.forEach(row => {
-        // --- API DATA MAPPING ---
-        // Assuming the Google Sheet headers are still "Room A", "Room B", etc.
-        // We look for both capitalized and lowercase versions for safety.
+        // Data mapping to new names
         const omahLor = getStatusCell(row["Room A"] || row["room a"]);
         const omahKidul = getStatusCell(row["Room B"] || row["room b"]);
         const omahWetan = getStatusCell(row["Room C"] || row["room c"]);
         const omahKulon = getStatusCell(row["Room D"] || row["room d"]);
-        // ------------------------
 
         const tr = document.createElement("tr");
         
@@ -159,6 +154,7 @@
 
     document.getElementById("checkBtn").addEventListener("click", filterByDateRange);
 
+    // Call loadData() to fetch data into sheetData, but do not render it yet.
     loadData();
   </script>
 </body>
