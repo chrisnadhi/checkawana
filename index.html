@@ -9,15 +9,21 @@
     th, td { padding: 10px; border: 1px solid #ccc; text-align: center; }
     .available { background: #c6f7d0; }
     .booked { background: #ffbfbf; }
-    input { padding: 8px; width: 200px; }
+    input, button { padding: 10px; margin-right: 10px; }
+    button { cursor: pointer; }
   </style>
 </head>
 <body>
 
   <h2>Villa Availability Checker</h2>
 
-  <label>Select Date: </label>
-  <input type="date" id="dateFilter">
+  <label>Check-in: </label>
+  <input type="date" id="checkin">
+
+  <label>Check-out: </label>
+  <input type="date" id="checkout">
+
+  <button id="checkBtn">Check Availability</button>
 
   <table id="availabilityTable">
     <thead>
@@ -36,15 +42,23 @@
   <script>
     const API_URL = "https://script.google.com/macros/s/AKfycbwH1_S9bIQ8YtV5OihsxJknCXGuTmHTiU4Sk_7EW9jWT2QHFuTEZ0MGnRa7E1tOhzh1pQ/exec";
 
+    // Load data on start
+    let sheetData = [];
+
     async function loadData() {
       const res = await fetch(API_URL);
       const json = await res.json();
-      renderTable(json.data);
+      sheetData = json.data;
     }
 
     function renderTable(data) {
       const tbody = document.querySelector("#availabilityTable tbody");
       tbody.innerHTML = "";
+
+      if (data.length === 0) {
+        tbody.innerHTML = "<tr><td colspan='6'>No data found for selected dates</td></tr>";
+        return;
+      }
 
       data.forEach(row => {
         const tr = document.createElement("tr");
@@ -67,14 +81,24 @@
       return status.toLowerCase().includes("available") ? "available" : "booked";
     }
 
-    document.getElementById("dateFilter").addEventListener("change", async (e) => {
-      const res = await fetch(API_URL);
-      const json = await res.json();
-      const selected = e.target.value;
+    function filterByDateRange() {
+      const checkin = document.getElementById("checkin").value;
+      const checkout = document.getElementById("checkout").value;
 
-      const filtered = json.data.filter(row => row.date.startsWith(selected));
+      if (!checkin || !checkout) {
+        alert("Please select both check-in and check-out dates.");
+        return;
+      }
+
+      const filtered = sheetData.filter(row => {
+        const rowDate = new Date(row.date);
+        return rowDate >= new Date(checkin) && rowDate <= new Date(checkout);
+      });
+
       renderTable(filtered);
-    });
+    }
+
+    document.getElementById("checkBtn").addEventListener("click", filterByDateRange);
 
     loadData();
   </script>
