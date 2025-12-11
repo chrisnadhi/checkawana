@@ -16,19 +16,24 @@
   </style>
 </head>
 <body>
+
   <h2>Villa Availability Checker</h2>
+
   <label>Check-in: </label>
   <input type="date" id="checkin">
+
   <label>Check-out: </label>
   <input type="date" id="checkout">
+
   <button id="checkBtn">Check Availability</button>
   <span id="loading">Loading data...</span>
+
   <table id="availabilityTable">
     <thead>
       <tr>
         <th>Date</th>
         <th>Season</th>
-        <th>Omah Lor</th>
+        <th>Omah Lor</th> 
         <th>Omah Kidul</th>
         <th>Omah Wetan</th>
         <th>Omah Kulon</th>
@@ -38,85 +43,88 @@
       <tr><td colspan="6">Please select your check-in and check-out dates and click "Check Availability".</td></tr>
     </tbody>
   </table>
+
   <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbwH1_S9bIQ8YtV5OihsxJknCXGuTmHTiU4Sk_7EW9jWT2QHFuTEZ0MGnRa7E1tOhzh1pQ/exec";
-   
+    const API_URL = "https://script.google.com/macros/s/AKfycbwH1_S9bIQ8YtV5OihsxJknCXGuTmHTiU4Sk_7EW9jWT2QHFuTEZ0MGnRa7E1tOhzh1pQ/exec"; 
+    
     let sheetData = [];
-    // --- NEW HELPER FUNCTION ---
+
     /**
-     * Creates a normalized Date object (midnight local time) from a YYYY-MM-DD string.
-     * This avoids timezone/time-of-day errors in comparisons.
+     * Membuat objek Date yang dinormalisasi (tengah malam waktu lokal) dari string YYYY-MM-DD.
      */
     function normalizeDate(dateString) {
       if (!dateString) return null;
-      // Split YYYY-MM-DD into parts
       const parts = dateString.split('-');
       if (parts.length !== 3) return null;
-      // Create a Date object using local time components (Year, Month-1, Day)
-      // This forces the time component to 00:00:00 in the user's local timezone.
-      const date = new Date(parts[0], parts[1] - 1, parts[2]);
-     
+
+      // Membuat objek Date menggunakan komponen waktu lokal (Tahun, Bulan-1, Hari)
+      const date = new Date(parts[0], parts[1] - 1, parts[2]); 
+      
       return isNaN(date.getTime()) ? null : date;
     }
-    // ----------------------------
+
     async function loadData() {
       const loading = document.getElementById("loading");
       const tbody = document.querySelector("#availabilityTable tbody");
-     
+      
       try {
         loading.style.display = "inline";
         const res = await fetch(API_URL);
         const json = await res.json();
-       
+        
         sheetData = Array.isArray(json) ? json : json.data;
+
         if(!sheetData || sheetData.length === 0) {
             console.error("No data found or error loading data format.");
-            tbody.innerHTML = "<tr><td colspan='6'>No data available from the source.</td></tr>";
+            // Pesan ini hanya muncul jika Gagal koneksi/data kosong
         }
       } catch (error) {
         console.error("Fetch error:", error);
         tbody.innerHTML = "<tr><td colspan='6'>Error connecting to Google Sheet.</td></tr>";
       } finally {
         loading.style.display = "none";
-        renderTable(sheetData); // Perbaikan: Render tabel setelah data dimuat
       }
     }
-    function getStatusFromRow(row, names) {
-      for (const name of names) {
-        const key = Object.keys(row).find(k => k.trim().toLowerCase() === name.toLowerCase());
-        if (key !== undefined) {
-          const val = String(row[key] || "").trim().toLowerCase();
-          return (val === "" || val === "null" || val === "undefined") ? "Available" : "Booked";
-        }
-      }
-      return "Available";
+
+    function getStatusCell(value) {
+      const valStr = String(value || "").toLowerCase().trim();
+      if (valStr === "" || valStr === "null" || valStr === "undefined") return "Available";
+      return "Booked";
     }
+
     function getClass(status) {
       return status === "Available" ? "available" : "booked";
     }
+
     function renderTable(data) {
       const tbody = document.querySelector("#availabilityTable tbody");
       tbody.innerHTML = "";
+
       if (data.length === 0) {
         tbody.innerHTML = "<tr><td colspan='6'>No dates found in this range.</td></tr>";
         return;
       }
+
       data.forEach(row => {
-        // --- Data Mapping dengan pencarian fleksibel ---
-        const omahLor = getStatusFromRow(row, ["Omah Lor", "omah lor", "Lor"]);
-        const omahKidul = getStatusFromRow(row, ["Omah Kidul", "omah kidul", "Kidul"]);
-        const omahWetan = getStatusFromRow(row, ["Omah Wetan", "omah wetan", "Wetan"]);
-        const omahKulon = getStatusFromRow(row, ["Omah Kulon", "omah kulon", "Kulon"]);
+        // --- Data Mapping ---
+        const omahLor = getStatusCell(row["Room A"] || row["room a"]);
+        const omahKidul = getStatusCell(row["Room B"] || row["room b"]);
+        const omahWetan = getStatusCell(row["Room C"] || row["room c"]);
+        const omahKulon = getStatusCell(row["Room D"] || row["room d"]);
+
         const tr = document.createElement("tr");
-       
-        // --- Date Display (using normalizeDate) ---
-        let displayDate = row.date;
-        const rowDateObj = normalizeDate(row.date);
-       
+        
+        // --- Tampilan Tanggal DENGAN PERBAIKAN PANGGILAN PROPERTY ---
+        // Mencoba row.date ATAU row.Date untuk menghindari 'undefined'
+        const rowDateData = row.date || row.Date; 
+        let displayDate = rowDateData;
+        const rowDateObj = normalizeDate(rowDateData);
+        
         if (rowDateObj) {
-            displayDate = rowDateObj.toLocaleDateString('id-ID'); // Perbaikan: Format konsisten (e.g., 15/12/2025)
-        }
+            displayDate = rowDateObj.toLocaleDateString(); 
+        } 
         // ------------------------
+
         tr.innerHTML = `
           <td>${displayDate}</td>
           <td>${row.season || row.Season || '-'}</td>
@@ -128,45 +136,56 @@
         tbody.appendChild(tr);
       });
     }
+
     function filterByDateRange() {
       const checkinValue = document.getElementById("checkin").value;
       const checkoutValue = document.getElementById("checkout").value;
+
       if (!checkinValue || !checkoutValue) {
         alert("Please select both check-in and check-out dates.");
         return;
       }
-      // --- Filter Logic using normalized dates ---
-      // The input values are already YYYY-MM-DD
+
+      // Normalisasi tanggal input
       const startDate = normalizeDate(checkinValue);
-      const endDate = normalizeDate(checkoutValue);
+      const endDate = normalizeDate(checkoutValue); 
+
       if (!startDate || !endDate) {
           alert("Error parsing selected dates. Please check date inputs.");
           return;
       }
-      if (startDate >= endDate) {
-        alert("Check-out date must be after check-in date."); // Perbaikan: Validasi tanggal
-        return;
-      }
+
       const filtered = sheetData.filter(row => {
-        const rowDate = normalizeDate(row.date);
-       
-        if (!rowDate) return false;
-        // Compare timestamps (Check-in INCLUDED, Check-out INCLUDED)
-        return rowDate.getTime() >= startDate.getTime() && rowDate.getTime() <= endDate.getTime(); // Perbaikan: <= untuk inklusif
+        // --- FILTER DENGAN PERBAIKAN PANGGILAN PROPERTY ---
+        const rowDateData = row.date || row.Date;
+        const rowDate = normalizeDate(rowDateData);
+        
+        if (!rowDate) return false; 
+
+        // Perbandingan tanggal: Check-in TERMASUK, Check-out TIDAK TERMASUK
+        return rowDate.getTime() >= startDate.getTime() && rowDate.getTime() < endDate.getTime();
       });
+
       renderTable(filtered);
     }
+
     document.getElementById("checkin").addEventListener("change", function () {
       const checkinDate = this.value;
       const checkout = document.getElementById("checkout");
+
       let minDate = new Date(checkinDate);
       minDate.setDate(minDate.getDate() + 1);
+
       checkout.min = minDate.toISOString().split("T")[0];
+
       if (checkout.value && checkout.value <= checkinDate) {
         checkout.value = "";
       }
     });
+
+    // EVENT LISTENER HANYA ADA DI SINI (TOMBOL)
     document.getElementById("checkBtn").addEventListener("click", filterByDateRange);
+
     loadData();
   </script>
 </body>
