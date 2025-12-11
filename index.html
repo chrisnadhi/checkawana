@@ -4,13 +4,15 @@
   <meta charset="UTF-8">
   <title>Villa Availability Checker</title>
   <style>
-    body { font-family: Arial; padding: 20px; }
+    body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: auto; }
     table { width: 100%; border-collapse: collapse; margin-top: 20px; }
     th, td { padding: 10px; border: 1px solid #ccc; text-align: center; }
-    .available { background: #c6f7d0; }
-    .booked { background: #ffbfbf; }
-    input, button { padding: 10px; margin-right: 10px; }
-    button { cursor: pointer; }
+    .available { background: #c6f7d0; color: #006400; font-weight: bold; }
+    .booked { background: #ffbfbf; color: #8b0000; }
+    input, button { padding: 10px; margin-right: 10px; margin-bottom: 10px; }
+    button { cursor: pointer; background-color: #007bff; color: white; border: none; border-radius: 4px; }
+    button:hover { background-color: #0056b3; }
+    #loading { display: none; color: #666; font-style: italic; }
   </style>
 </head>
 <body>
@@ -24,6 +26,7 @@
   <input type="date" id="checkout">
 
   <button id="checkBtn">Check Availability</button>
+  <span id="loading">Loading data...</span>
 
   <table id="availabilityTable">
     <thead>
@@ -36,19 +39,58 @@
         <th>Room D</th>
       </tr>
     </thead>
-    <tbody></tbody>
+    <tbody>
+      <tr><td colspan="6">Loading data from Google Sheets...</td></tr>
+    </tbody>
   </table>
 
   <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbwH1_S9bIQ8YtV5OihsxJknCXGuTmHTiU4Sk_7EW9jWT2QHFuTEZ0MGnRa7E1tOhzh1pQ/exec";
-
-    // Load data on start
+    // ---------------------------------------------------------
+    // 1. REPLACE THIS URL WITH YOUR ACTUAL GOOGLE SCRIPT URL
+    // ---------------------------------------------------------
+    const API_URL = "https://script.google.com/macros/s/AKfycbwH1_S9bIQ8YtV5OihsxJknCXGuTmHTiU4Sk_7EW9jWT2QHFuTEZ0MGnRa7E1tOhzh1pQ/exec"; 
+    
     let sheetData = [];
 
     async function loadData() {
-      const res = await fetch(API_URL);
-      const json = await res.json();
-      sheetData = json.data;
+      const loading = document.getElementById("loading");
+      const tbody = document.querySelector("#availabilityTable tbody");
+      
+      try {
+        loading.style.display = "inline";
+        const res = await fetch(API_URL);
+        
+        // Debugging: Check what the API actually returned
+        const json = await res.json();
+        console.log("API Response:", json); 
+
+        // 2. FIXED: Handle different JSON structures (Array vs Object)
+        sheetData = Array.isArray(json) ? json : json.data;
+
+        if(!sheetData) {
+            console.error("Could not find data array. Check console for structure.");
+            tbody.innerHTML = "<tr><td colspan='6'>Error loading data format</td></tr>";
+            return;
+        }
+
+        renderTable(sheetData); // Render all data initially
+      } catch (error) {
+        console.error("Fetch error:", error);
+        tbody.innerHTML = "<tr><td colspan='6'>Error connecting to Google Sheet</td></tr>";
+      } finally {
+        loading.style.display = "none";
+      }
+    }
+
+    function getStatusCell(value) {
+      // Normalize to string to avoid errors if value is numbers
+      const valStr = String(value).toLowerCase().trim();
+      if (!value || valStr === "" || valStr === "null") return "Available";
+      return "Booked";
+    }
+
+    function getClass(status) {
+      return status === "Available" ? "available" : "booked";
     }
 
     function renderTable(data) {
@@ -56,29 +98,34 @@
       tbody.innerHTML = "";
 
       if (data.length === 0) {
-        tbody.innerHTML = "<tr><td colspan='6'>No data found for selected dates</td></tr>";
+        tbody.innerHTML = "<tr><td colspan='6'>No dates found in this range</td></tr>";
         return;
       }
 
       data.forEach(row => {
+        // 3. FIXED: Using bracket notation based on likely Header Names
+        // CAUTION: Ensure your Google Sheet Headers match these EXACTLY (or use lowercase)
+        // I am trying both "Room A" and "room a" just in case.
+        const roomA = getStatusCell(row["Omah Lor"] || row["omah lor"]);
+        const roomB = getStatusCell(row["Omah Kidul"] || row["omah kidul"]);
+        const roomC = getStatusCell(row["Omah Wetan"] || row["omah wetan"]);
+        const roomD = getStatusCell(row["Omah Kulon"] || row["omah kulon"]);
+
         const tr = document.createElement("tr");
+        
+        // Format date nicely
+        const displayDate = new Date(row.date).toLocaleDateString();
 
         tr.innerHTML = `
           <td>${row.date}</td>
-          <td>${row.season}</td>
-          <td class="${getClass(row['room a'])}">${row['Omah Lor']}</td>
-          <td class="${getClass(row['room b'])}">${row['Omah Kidul']}</td>
-          <td class="${getClass(row['room c'])}">${row['Omah Wetan']}</td>
-          <td class="${getClass(row['room d'])}">${row['Omah Kulon']}</td>
+          <td>${row.season || row.Season || '-'}</td>
+          <td class="${getClass(roomA)}">${roomA}</td>
+          <td class="${getClass(roomB)}">${roomB}</td>
+          <td class="${getClass(roomC)}">${roomC}</td>
+          <td class="${getClass(roomD)}">${roomD}</td>
         `;
-
         tbody.appendChild(tr);
       });
-    }
-
-    function getClass(status) {
-      if (!status) return "";
-      return status.toLowerCase().includes("available") ? "available" : "booked";
     }
 
     function filterByDateRange() {
@@ -90,18 +137,40 @@
         return;
       }
 
+      // Convert inputs to Date objects (set to midnight to ensure clean comparison)
+      const startDate = new Date(checkin);
+      const endDate = new Date(checkout);
+
       const filtered = sheetData.filter(row => {
         const rowDate = new Date(row.date);
-        return rowDate >= new Date(checkin) && rowDate <= new Date(checkout);
+        
+        // 4. FIXED: Logic change.
+        // We want dates GREATER/EQUAL to checkin AND STRICTLY LESS than checkout.
+        // (You don't need the room ON the checkout day).
+        return rowDate >= startDate && rowDate < endDate;
       });
 
       renderTable(filtered);
     }
 
+    // UX: Set minimum dates
+    document.getElementById("checkin").addEventListener("change", function () {
+      const checkinDate = this.value;
+      const checkout = document.getElementById("checkout");
+
+      let minDate = new Date(checkinDate);
+      minDate.setDate(minDate.getDate() + 1);
+
+      checkout.min = minDate.toISOString().split("T")[0];
+
+      if (checkout.value && checkout.value <= checkinDate) {
+        checkout.value = "";
+      }
+    });
+
     document.getElementById("checkBtn").addEventListener("click", filterByDateRange);
 
     loadData();
   </script>
-
 </body>
 </html>
