@@ -49,18 +49,24 @@
     
     let sheetData = [];
 
+    // --- NEW HELPER FUNCTION ---
     /**
-     * Helper function to safely parse the YYYY-MM-DD date format.
+     * Creates a normalized Date object (midnight local time) from a YYYY-MM-DD string.
+     * This avoids timezone/time-of-day errors in comparisons.
      */
-    function parseSheetDate(dateString) {
+    function normalizeDate(dateString) {
       if (!dateString) return null;
+      // Split YYYY-MM-DD into parts
+      const parts = dateString.split('-');
+      if (parts.length !== 3) return null;
+
+      // Create a Date object using local time components (Year, Month-1, Day)
+      // This forces the time component to 00:00:00 in the user's local timezone.
+      const date = new Date(parts[0], parts[1] - 1, parts[2]); 
       
-      // Use YYYY-MM-DD format (ISO 8601) - reliably parsed by JS.
-      const date = new Date(dateString); 
-      
-      // Check if the date is valid
       return isNaN(date.getTime()) ? null : date;
     }
+    // ----------------------------
 
     async function loadData() {
       const loading = document.getElementById("loading");
@@ -105,7 +111,7 @@
       }
 
       data.forEach(row => {
-        // --- Data Mapping (assuming Sheet Headers are Room A, B, C, D) ---
+        // --- Data Mapping ---
         const omahLor = getStatusCell(row["Room A"] || row["room a"]);
         const omahKidul = getStatusCell(row["Room B"] || row["room b"]);
         const omahWetan = getStatusCell(row["Room C"] || row["room c"]);
@@ -113,17 +119,13 @@
 
         const tr = document.createElement("tr");
         
-        // --- Date Display ---
+        // --- Date Display (using normalizeDate) ---
         let displayDate = row.date;
-        const rowDateObj = parseSheetDate(row.date);
+        const rowDateObj = normalizeDate(row.date);
         
         if (rowDateObj) {
-            // Display date using local format (e.g., 12/01/2025)
             displayDate = rowDateObj.toLocaleDateString(); 
-        } else {
-            // Fallback display if parsing failed
-            displayDate = row.date; 
-        }
+        } 
         // ------------------------
 
         tr.innerHTML = `
@@ -147,16 +149,22 @@
         return;
       }
 
-      // Check-in and Check-out inputs are already in YYYY-MM-DD and are reliably parsed
-      const startDate = new Date(checkinValue);
-      const endDate = new Date(checkoutValue);
+      // --- Filter Logic using normalized dates ---
+      // The input values are already YYYY-MM-DD
+      const startDate = normalizeDate(checkinValue);
+      const endDate = normalizeDate(checkoutValue); 
+
+      if (!startDate || !endDate) {
+          alert("Error parsing selected dates. Please check date inputs.");
+          return;
+      }
 
       const filtered = sheetData.filter(row => {
-        const rowDate = parseSheetDate(row.date);
+        const rowDate = normalizeDate(row.date);
         
         if (!rowDate) return false; 
 
-        // Compare dates (Check-in INCLUDED, Check-out EXCLUDED)
+        // Compare timestamps (Check-in INCLUDED, Check-out EXCLUDED)
         return rowDate.getTime() >= startDate.getTime() && rowDate.getTime() < endDate.getTime();
       });
 
