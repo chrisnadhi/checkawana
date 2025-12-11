@@ -49,6 +49,28 @@
     
     let sheetData = [];
 
+    /**
+     * Helper function to safely parse date strings from the Google Sheet API 
+     * which often return dates in a format like "12/01/2025" instead of YYYY-MM-DD.
+     * This ensures the Date constructor works correctly.
+     */
+    function parseSheetDate(dateString) {
+      if (!dateString) return null;
+      // Try to recognize common formats (MM/DD/YYYY or DD/MM/YYYY)
+      const parts = dateString.split(/[-\/]/);
+      
+      // Assuming the API returns MM/DD/YYYY format. If your API returns DD/MM/YYYY, 
+      // you will need to swap the first two elements: new Date(parts[2], parts[1] - 1, parts[0]);
+      if (parts.length === 3) {
+          // Date constructor: year, month (0-indexed), day
+          return new Date(parts[2], parts[0] - 1, parts[1]); 
+      }
+      
+      // Fallback for standard ISO formats
+      const standardDate = new Date(dateString);
+      return isNaN(standardDate) ? null : standardDate;
+    }
+
     async function loadData() {
       const loading = document.getElementById("loading");
       const tbody = document.querySelector("#availabilityTable tbody");
@@ -64,9 +86,6 @@
             console.error("Could not find data array.");
             tbody.innerHTML = "<tr><td colspan='6'>Error loading data format</td></tr>";
         }
-        
-        // ❌ REMOVED: The initial call to renderTable(sheetData) has been removed.
-
       } catch (error) {
         console.error("Fetch error:", error);
         tbody.innerHTML = "<tr><td colspan='6'>Error connecting to Google Sheet</td></tr>";
@@ -90,12 +109,12 @@
       tbody.innerHTML = "";
 
       if (data.length === 0) {
-        tbody.innerHTML = "<tr><td colspan='6'>No dates found in this range</td></tr>";
+        tbody.innerHTML = "<tr><td colspan='6'>No dates found in this range.</td></tr>";
         return;
       }
 
       data.forEach(row => {
-        // Data mapping to new names
+        // --- Data Mapping ---
         const omahLor = getStatusCell(row["Room A"] || row["room a"]);
         const omahKidul = getStatusCell(row["Room B"] || row["room b"]);
         const omahWetan = getStatusCell(row["Room C"] || row["room c"]);
@@ -103,8 +122,18 @@
 
         const tr = document.createElement("tr");
         
+        // --- Date Display Fix ---
         let displayDate = row.date;
-        try { displayDate = new Date(row.date).toLocaleDateString(); } catch(e) {}
+        const rowDateObj = parseSheetDate(row.date);
+        
+        if (rowDateObj) {
+            // Display the date in the local format (e.g., 12/1/2025)
+            displayDate = rowDateObj.toLocaleDateString(); 
+        } else {
+            // Show error message if date couldn't be parsed
+            displayDate = `ERROR: ${row.date}`;
+        }
+        // ------------------------
 
         tr.innerHTML = `
           <td>${displayDate}</td>
@@ -119,20 +148,27 @@
     }
 
     function filterByDateRange() {
-      const checkin = document.getElementById("checkin").value;
-      const checkout = document.getElementById("checkout").value;
+      const checkinValue = document.getElementById("checkin").value;
+      const checkoutValue = document.getElementById("checkout").value;
 
-      if (!checkin || !checkout) {
+      if (!checkinValue || !checkoutValue) {
         alert("Please select both check-in and check-out dates.");
         return;
       }
 
-      const startDate = new Date(checkin);
-      const endDate = new Date(checkout);
+      // Input dates are in YYYY-MM-DD format, which is easily parsed
+      const startDate = new Date(checkinValue);
+      const endDate = new Date(checkoutValue);
 
       const filtered = sheetData.filter(row => {
-        const rowDate = new Date(row.date);
-        return rowDate >= startDate && rowDate < endDate;
+        // --- Filtering Fix ---
+        const rowDate = parseSheetDate(row.date);
+        
+        // Skip filtering if the date could not be parsed
+        if (!rowDate) return false; 
+
+        // Compare timestamps
+        return rowDate.getTime() >= startDate.getTime() && rowDate.getTime() < endDate.getTime();
       });
 
       renderTable(filtered);
@@ -154,7 +190,6 @@
 
     document.getElementById("checkBtn").addEventListener("click", filterByDateRange);
 
-    // Call loadData() to fetch data into sheetData, but do not render it yet.
     loadData();
   </script>
 </body>
