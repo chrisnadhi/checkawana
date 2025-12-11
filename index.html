@@ -1,320 +1,181 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Awana House Villa Availability Checker</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Availability Checker</title>
 
 <style>
-  body { 
-    font-family: Arial, sans-serif; 
-    padding: 20px; 
-    max-width: 900px; 
-    margin: auto; 
-  }
+body {
+  background: #f5f5f5;
+  margin: 0;
+  padding: 20px;
+  font-family: "Inter", sans-serif;
+}
 
-  h2 {
-    margin-bottom: 8px;
-  }
+/* WIDGET */
+.availability-widget {
+  max-width: 420px;
+  margin: auto;
+  padding: 18px;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+}
 
-  .field-group {
-    margin-bottom: 20px;
-  }
+/* TITLE */
+.availability-widget h2 {
+  text-align: center;
+  font-size: 22px;
+  margin-bottom: 20px;
+  font-weight: 600;
+}
 
-  input, button {
-    padding: 10px;
-    margin-right: 10px;
-  }
+/* LABELS */
+.availability-widget label {
+  font-size: 15px;
+  margin-top: 12px;
+  display: block;
+  font-weight: 500;
+}
 
-  button {
-    cursor: pointer; 
-    background-color: #007bff;
-    border: none;
-    color: white;
-    border-radius: 5px;
-    padding: 10px 18px;
-  }
+/* DATE INPUTS */
+.availability-widget input[type="date"] {
+  width: 100%;
+  padding: 12px;
+  margin-top: 6px;
+  border-radius: 10px;
+  border: 1px solid #d1d5db;
+  font-size: 16px;
+  outline: none;
+}
 
-  button:hover {
-    background-color: #0056b3;
-  }
+/* BUTTON */
+#checkBtn {
+  width: 100%;
+  padding: 14px;
+  margin-top: 22px;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 17px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s;
+}
 
-  #loading {
-    display: none;
-    font-style: italic;
-    color: #666;
-  }
+#checkBtn:hover {
+  background: #2563eb;
+}
 
-  #summaryBox {
-    margin-top: 18px;
-    padding: 12px;
-    border-radius: 6px;
-    background: #f8f8f8;
-    display: none;
-  }
+/* RESULTS */
+#results {
+  margin-top: 22px;
+}
 
-  .status-available { color: #006400; font-weight: bold; }
-  .status-booked { color: #8b0000; font-weight: bold; }
+.room {
+  padding: 14px;
+  border-radius: 12px;
+  margin-bottom: 12px;
+  font-size: 16px;
+  font-weight: 500;
+}
 
-  table {
-    width: 100%; 
-    border-collapse: collapse; 
-    margin-top: 20px;
-  }
+.available {
+  background: #d1fae5;
+  border: 1px solid #10b981;
+}
 
-  th, td {
-    padding: 10px; 
-    border: 1px solid #ddd; 
-    text-align: center;
-  }
-
-  .available { background: #c6f7d0; color: #006400; font-weight: bold; }
-  .booked { background: #ffbfbf; color: #8b0000; }
-
-  #whatsappBtn {
-    margin-top: 15px;
-    padding: 12px;
-    background: #25d366;
-    color: white;
-    border-radius: 6px;
-    display: none;
-    text-decoration: none;
-    font-weight: bold;
-  }
+.booked {
+  background: #fee2e2;
+  border: 1px solid #ef4444;
+}
 </style>
 </head>
 
+
 <body>
 
-<h2>Villa Availability Checker</h2>
+<div class="availability-widget">
+  <h2>Check Availability</h2>
 
-<div class="field-group">
-  <label>Check-in:</label>
+  <label>Check-in</label>
   <input type="date" id="checkin">
 
-  <label>Check-out:</label>
+  <label>Check-out</label>
   <input type="date" id="checkout">
 
   <button id="checkBtn">Check Availability</button>
-  <span id="loading">Loading data...</span>
+
+  <div id="results"></div>
 </div>
 
-<div id="summaryBox" style="display:none;"></div>
-<a id="whatsappBtn" style="display:none;" target="_blank">Book via WhatsApp</a>
-
-<table id="availabilityTable">
-  <thead>
-    <tr>
-      <th>Date</th>
-      <th>Season</th>
-      <th>Omah Lor</th>
-      <th>Omah Kidul</th>
-      <th>Omah Wetan</th>
-      <th>Omah Kulon</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr><td colspan="6">Please select dates and click "Check Availability".</td></tr>
-  </tbody>
-</table>
 
 <script>
-const API_URL = "https://script.google.com/macros/s/AKfycbwH1_S9bIQ8YtV5OihsxJknCXGuTmHTiU4Sk_7EW9jWT2QHFuTEZ0MGnRa7E1tOhzh1pQ/exec";
-let sheetData = [];
+// ✔️ Your Apps Script API URL
+const sheetURL = "https://script.google.com/macros/s/AKfycbwH1_S9bIQ8YtV5OihsxJknCXGuTmHTiU4Sk_7EW9jWT2QHFuTEZ0MGnRa7E1tOhzh1pQ/exec"; 
 
-/* ------------------------------------------------------------------
-   1. UNIVERSAL COLUMN NORMALIZER (Auto-detects correct column name)
------------------------------------------------------------------- */
-function get(field, row) {
-  if (!row) return null;
-  const target = field.trim().toLowerCase();
-  for (const key of Object.keys(row)) {
-    if (key.trim().toLowerCase() === target) return row[key];
-  }
-  return null;
-}
-
-/* ------------------------------------------------------------------
-   2. NORMALIZE DATE FROM SHEET + FROM USER INPUT
------------------------------------------------------------------- */
-function normalizeDate(str) {
-  if (!str) return null;
-  const parts = String(str).split("-");
-  if (parts.length !== 3) return null;
-  return new Date(parts[0], parts[1]-1, parts[2]); 
-}
-
-/* ------------------------------------------------------------------
-   3. LOAD + PREPROCESS DATA (FAST)
------------------------------------------------------------------- */
-async function loadData() {
-  const loading = document.getElementById("loading");
-  loading.style.display = "inline";
-
-  try {
-    const res = await fetch(API_URL);
-    const json = await res.json();
-
-    sheetData = (json.data || json).map(row => {
-      const rawDate = get("date", row);
-      return {
-        ...row,
-        _dateObj: normalizeDate(rawDate)
-      };
-    });
-
-  } catch (err) {
-    alert("Error loading Google Sheet. Please try again.");
-  }
-
-  loading.style.display = "none";
-}
-
-/* ------------------------------------------------------------------
-   4. BOOKED / AVAILABLE LOGIC
------------------------------------------------------------------- */
-function getStatusCell(val) {
-  if (!val) return "Available";
-  if (String(val).trim() === "") return "Available";
-  return "Booked";
-}
-
-function getClass(status) {
-  return status === "Available" ? "available" : "booked";
-}
-
-/* ------------------------------------------------------------------
-   5. RENDER RESULT TABLE
------------------------------------------------------------------- */
-function renderTable(list) {
-  const tbody = document.querySelector("#availabilityTable tbody");
-  tbody.innerHTML = "";
-
-  if (list.length === 0) {
-    tbody.innerHTML = "<tr><td colspan='6'>No dates in range.</td></tr>";
-    return;
-  }
-
-  list.forEach(row => {
-    const d = formatTanggalIndo(row._dateObj);
-
-    const lor   = getStatusCell(get("omah lor",   row));
-    const kidul = getStatusCell(get("omah kidul", row));
-    const wetan = getStatusCell(get("omah wetan", row));
-    const kulon = getStatusCell(get("omah kulon", row));
-
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${d}</td>
-      <td>${get("season", row) || "-"}</td>
-      <td class="${getClass(lor)}">${lor}</td>
-      <td class="${getClass(kidul)}">${kidul}</td>
-      <td class="${getClass(wetan)}">${wetan}</td>
-      <td class="${getClass(kulon)}">${kulon}</td>
-    `;
-    tbody.appendChild(tr);
-  });
-}
-
-/* ------------------------------------------------------------------
-   6. SUMMARIZE ROOM STATUS
------------------------------------------------------------------- */
-function showSummary(results) {
-  if (results.length === 0) {
-    document.getElementById("summaryBox").style.display = "none";
-    document.getElementById("whatsappBtn").style.display = "none";
-    return;
-  }
-
-  let lor   = "Available",
-      kidul = "Available",
-      wetan = "Available",
-      kulon = "Available";
-
-  results.forEach(r => {
-    if (getStatusCell(get("omah lor", r))   === "Booked") lor = "Booked";
-    if (getStatusCell(get("omah kidul", r)) === "Booked") kidul = "Booked";
-    if (getStatusCell(get("omah wetan", r)) === "Booked") wetan = "Booked";
-    if (getStatusCell(get("omah kulon", r)) === "Booked") kulon = "Booked";
-  });
-
-  const box = document.getElementById("summaryBox");
-  box.style.display = "block";
-  box.innerHTML = `
-    <strong>Availability Summary:</strong><br>
-    Omah Lor: <span class="status-${lor.toLowerCase()}">${lor}</span><br>
-    Omah Kidul: <span class="status-${kidul.toLowerCase()}">${kidul}</span><br>
-    Omah Wetan: <span class="status-${wetan.toLowerCase()}">${wetan}</span><br>
-    Omah Kulon: <span class="status-${kulon.toLowerCase()}">${kulon}</span>
-  `;
-
-  // Show WhatsApp button with filled date range
-  const checkin = document.getElementById("checkin").value;
-  const checkout = document.getElementById("checkout").value;
-  const wa = document.getElementById("whatsappBtn");
-
-  wa.href = `https://wa.me/6281234567890?text=Saya%20ingin%20booking%20Villa%20Awana%20dari%20${checkin}%20sampai%20${checkout}`;
-  wa.style.display = "inline-block";
-}
-
-/* ------------------------------------------------------------------
-   7. FILTER DATE RANGE
------------------------------------------------------------------- */
-function filterByDateRange() {
-  const cin = document.getElementById("checkin").value;
-  const cout = document.getElementById("checkout").value;
-
-  if (!cin || !cout) {
-    alert("Please select both check-in and check-out.");
-    return;
-  }
-
-  const start = normalizeDate(cin);
-  const end = normalizeDate(cout);
-
-  const results = sheetData.filter(row => {
-    if (!row._dateObj) return false;
-    return row._dateObj >= start && row._dateObj < end; 
-  });
-
-  renderTable(results);
-  showSummary(results);
-}
-
-/* ------------------------------------------------------------------
-   8. CHECKOUT DATE LIMIT
------------------------------------------------------------------- */
-document.getElementById("checkin").addEventListener("change", function () {
-  const checkinDate = this.value;
-  const checkout = document.getElementById("checkout");
-
-  let minDate = new Date(checkinDate);
-  minDate.setDate(minDate.getDate() + 1);
-
-  checkout.min = minDate.toISOString().split("T")[0];
+// When check-in selected → force checkout to be after
+document.getElementById("checkin").addEventListener("change", e => {
+  let checkin = e.target.value;
+  document.getElementById("checkout").min = checkin;
 });
 
-/* ------------------------------------------------------------------
-   8. FRIENDLY DATE
------------------------------------------------------------------- */
-function formatTanggalIndo(dateObj) {
-  const bulan = [
-    "Januari", "Februari", "Maret", "April", "Mei", "Juni",
-    "Juli", "Agustus", "September", "Oktober", "November", "Desember"
-  ];
+// Button click → check availability
+document.getElementById("checkBtn").addEventListener("click", async () => {
   
-  const d = dateObj.getDate();
-  const m = bulan[dateObj.getMonth()];
-  return `${d} ${m}`;
-}
+  const checkin = document.getElementById("checkin").value;
+  const checkout = document.getElementById("checkout").value;
 
-  
-/* ------------------------------------------------------------------
-   9. BUTTON CLICK HANDLER
------------------------------------------------------------------- */
-document.getElementById("checkBtn").addEventListener("click", filterByDateRange);
+  if (!checkin || !checkout) {
+    alert("Please select both dates.");
+    return;
+  }
 
-loadData();
+  // Fetch Google Sheet data
+  const res = await fetch(sheetURL);
+  const data = await res.json();
+  const rows = data.values;
+
+  // Room columns: C, D, E, F → 2,3,4,5
+  const roomIndexes = [2, 3, 4, 5];
+
+  let resultsHTML = "";
+
+  // Find start & end row index by matching dates in Column A
+  const start = rows.findIndex(r => r[0] === checkin);
+  const end = rows.findIndex(r => r[0] === checkout);
+
+  if (start === -1 || end === -1) {
+    document.getElementById("results").innerHTML =
+      "<p style='color:red'>Selected dates are outside database range.</p>";
+    return;
+  }
+
+  roomIndexes.forEach(idx => {
+    let roomName = rows[0][idx];
+    let isAvailable = true;
+
+    for (let i = start; i < end; i++) {
+      if (rows[i][idx] && rows[i][idx] !== "") {
+        isAvailable = false;
+        break;
+      }
+    }
+
+    resultsHTML += `
+      <div class="room ${isAvailable ? "available" : "booked"}">
+        <strong>${roomName}</strong><br>
+        ${isAvailable ? "Available ✓" : "Booked ✕"}
+      </div>
+    `;
+  });
+
+  document.getElementById("results").innerHTML = resultsHTML;
+});
 </script>
+
 
 </body>
 </html>
