@@ -1,181 +1,231 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Availability Checker</title>
+  <meta charset="UTF-8">
+  <title>Villa Availability Checker</title>
 
-<style>
-body {
-  background: #f5f5f5;
-  margin: 0;
-  padding: 20px;
-  font-family: "Inter", sans-serif;
-}
-
-/* WIDGET */
-.availability-widget {
-  max-width: 420px;
-  margin: auto;
-  padding: 18px;
-  background: #ffffff;
-  border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-}
-
-/* TITLE */
-.availability-widget h2 {
-  text-align: center;
-  font-size: 22px;
-  margin-bottom: 20px;
-  font-weight: 600;
-}
-
-/* LABELS */
-.availability-widget label {
-  font-size: 15px;
-  margin-top: 12px;
-  display: block;
-  font-weight: 500;
-}
-
-/* DATE INPUTS */
-.availability-widget input[type="date"] {
-  width: 100%;
-  padding: 12px;
-  margin-top: 6px;
-  border-radius: 10px;
-  border: 1px solid #d1d5db;
-  font-size: 16px;
-  outline: none;
-}
-
-/* BUTTON */
-#checkBtn {
-  width: 100%;
-  padding: 14px;
-  margin-top: 22px;
-  background: #3b82f6;
-  color: white;
-  border: none;
-  border-radius: 12px;
-  font-size: 17px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: 0.2s;
-}
-
-#checkBtn:hover {
-  background: #2563eb;
-}
-
-/* RESULTS */
-#results {
-  margin-top: 22px;
-}
-
-.room {
-  padding: 14px;
-  border-radius: 12px;
-  margin-bottom: 12px;
-  font-size: 16px;
-  font-weight: 500;
-}
-
-.available {
-  background: #d1fae5;
-  border: 1px solid #10b981;
-}
-
-.booked {
-  background: #fee2e2;
-  border: 1px solid #ef4444;
-}
-</style>
-</head>
-
-
-<body>
-
-<div class="availability-widget">
-  <h2>Check Availability</h2>
-
-  <label>Check-in</label>
-  <input type="date" id="checkin">
-
-  <label>Check-out</label>
-  <input type="date" id="checkout">
-
-  <button id="checkBtn">Check Availability</button>
-
-  <div id="results"></div>
-</div>
-
-
-<script>
-// ✔️ Your Apps Script API URL
-const sheetURL = "https://script.google.com/macros/s/AKfycbwH1_S9bIQ8YtV5OihsxJknCXGuTmHTiU4Sk_7EW9jWT2QHFuTEZ0MGnRa7E1tOhzh1pQ/exec"; 
-
-// When check-in selected → force checkout to be after
-document.getElementById("checkin").addEventListener("change", e => {
-  let checkin = e.target.value;
-  document.getElementById("checkout").min = checkin;
-});
-
-// Button click → check availability
-document.getElementById("checkBtn").addEventListener("click", async () => {
-  
-  const checkin = document.getElementById("checkin").value;
-  const checkout = document.getElementById("checkout").value;
-
-  if (!checkin || !checkout) {
-    alert("Please select both dates.");
-    return;
-  }
-
-  // Fetch Google Sheet data
-  const res = await fetch(sheetURL);
-  const data = await res.json();
-  const rows = data.values;
-
-  // Room columns: C, D, E, F → 2,3,4,5
-  const roomIndexes = [2, 3, 4, 5];
-
-  let resultsHTML = "";
-
-  // Find start & end row index by matching dates in Column A
-  const start = rows.findIndex(r => r[0] === checkin);
-  const end = rows.findIndex(r => r[0] === checkout);
-
-  if (start === -1 || end === -1) {
-    document.getElementById("results").innerHTML =
-      "<p style='color:red'>Selected dates are outside database range.</p>";
-    return;
-  }
-
-  roomIndexes.forEach(idx => {
-    let roomName = rows[0][idx];
-    let isAvailable = true;
-
-    for (let i = start; i < end; i++) {
-      if (rows[i][idx] && rows[i][idx] !== "") {
-        isAvailable = false;
-        break;
-      }
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 15px;
+      max-width: 900px;
+      margin: auto;
     }
 
-    resultsHTML += `
-      <div class="room ${isAvailable ? "available" : "booked"}">
-        <strong>${roomName}</strong><br>
-        ${isAvailable ? "Available ✓" : "Booked ✕"}
-      </div>
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .input-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      margin-bottom: 15px;
+    }
+
+    input[type="date"], button {
+      padding: 12px;
+      font-size: 16px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+
+    button {
+      background: #007bff;
+      color: white;
+      cursor: pointer;
+      border: none;
+    }
+
+    button:hover {
+      background: #0056b3;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      font-size: 15px;
+    }
+
+    th, td {
+      padding: 10px;
+      border: 1px solid #ddd;
+      text-align: center;
+    }
+
+    .available {
+      background: #c6f7d0;
+      color: #006400;
+      font-weight: bold;
+    }
+
+    .booked {
+      background: #ffbfbf;
+      color: #8b0000;
+      font-weight: bold;
+    }
+
+    #loading {
+      display: none;
+      text-align: center;
+      margin-top: 10px;
+      color: #666;
+    }
+
+    /* 📱 MOBILE FRIENDLY */
+    @media (max-width: 600px) {
+      table, thead, tbody, th, td, tr {
+        font-size: 13px;
+      }
+      th, td {
+        padding: 6px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <h2>Villa Availability Checker</h2>
+
+  <div class="input-group">
+    <input type="date" id="checkin">
+    <input type="date" id="checkout">
+    <button id="checkBtn">Check Availability</button>
+  </div>
+
+  <div id="loading">Loading data...</div>
+
+  <table id="availabilityTable">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Season</th>
+        <th>Omah Lor</th>
+        <th>Omah Kidul</th>
+        <th>Omah Wetan</th>
+        <th>Omah Kulon</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td colspan="6">Please select check-in and check-out dates.</td></tr>
+    </tbody>
+  </table>
+
+<script>
+
+const API_URL = "https://script.google.com/macros/s/AKfycbwH1_S9bIQ8YtV5OihsxJknCXGuTmHTiU4Sk_7EW9jWT2QHFuTEZ0MGnRa7E1tOhzh1pQ/exec";
+
+let sheetData = [];
+
+/* Normalize YYYY-MM-DD to JS Date (local timezone) */
+function normalizeDate(dateString) {
+  if (!dateString) return null;
+  const [y, m, d] = dateString.split("-");
+  return new Date(y, m - 1, d);
+}
+
+/* Human format: Senin, 10 Januari */
+function formatHumanDate(dateString) {
+  const d = normalizeDate(dateString);
+  if (!d) return dateString;
+
+  const days = ["Minggu","Senin","Selasa","Rabu","Kamis","Jumat","Sabtu"];
+  const months = [
+    "Januari","Februari","Maret","April","Mei","Juni",
+    "Juli","Agustus","September","Oktober","November","Desember"
+  ];
+
+  return `${days[d.getDay()]}, ${d.getDate()} ${months[d.getMonth()]}`;
+}
+
+async function loadData() {
+  document.getElementById("loading").style.display = "block";
+
+  try {
+    const res = await fetch(API_URL);
+    const json = await res.json();
+
+    sheetData = json.data; // correct based on your output
+  } catch (err) {
+    console.error("Fetch error:", err);
+    document.querySelector("#availabilityTable tbody").innerHTML =
+      "<tr><td colspan='6'>Error loading data.</td></tr>";
+  }
+
+  document.getElementById("loading").style.display = "none";
+}
+
+function checkStatus(val) {
+  return (val === "" || val === null || val === undefined)
+    ? "Available"
+    : "Booked";
+}
+
+function renderTable(filtered) {
+  const tbody = document.querySelector("#availabilityTable tbody");
+  tbody.innerHTML = "";
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = "<tr><td colspan='6'>No dates found.</td></tr>";
+    return;
+  }
+
+  filtered.forEach(row => {
+    const tr = document.createElement("tr");
+
+    tr.innerHTML = `
+      <td>${formatHumanDate(row.date)}</td>
+      <td>${row.Season || "-"}</td>
+      <td class="${checkStatus(row["Omah Lor"]).toLowerCase()}">${checkStatus(row["Omah Lor"])}</td>
+      <td class="${checkStatus(row["Omah Kidul"]).toLowerCase()}">${checkStatus(row["Omah Kidul"])}</td>
+      <td class="${checkStatus(row["Omah Wetan"]).toLowerCase()}">${checkStatus(row["Omah Wetan"])}</td>
+      <td class="${checkStatus(row["Omah Kulon"]).toLowerCase()}">${checkStatus(row["Omah Kulon"])}</td>
     `;
+
+    tbody.appendChild(tr);
+  });
+}
+
+function filterByDate() {
+  const ci = document.getElementById("checkin").value;
+  const co = document.getElementById("checkout").value;
+
+  if (!ci || !co) {
+    alert("Please select both check-in and check-out dates.");
+    return;
+  }
+
+  const start = normalizeDate(ci);
+  const end = normalizeDate(co);
+
+  const filtered = sheetData.filter(row => {
+    const d = normalizeDate(row.date);
+    return d >= start && d < end;  // checkout not included
   });
 
-  document.getElementById("results").innerHTML = resultsHTML;
-});
-</script>
+  renderTable(filtered);
+}
 
+document.getElementById("checkBtn").addEventListener("click", filterByDate);
+
+document.getElementById("checkin").addEventListener("change", function () {
+  const minCheckout = new Date(this.value);
+  minCheckout.setDate(minCheckout.getDate() + 1);
+
+  const checkout = document.getElementById("checkout");
+  checkout.min = minCheckout.toISOString().split("T")[0];
+
+  if (checkout.value && checkout.value <= this.value) {
+    checkout.value = "";
+  }
+});
+
+loadData();
+
+</script>
 
 </body>
 </html>
