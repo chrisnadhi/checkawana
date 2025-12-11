@@ -33,10 +33,10 @@
       <tr>
         <th>Date</th>
         <th>Season</th>
-        <th>Room A</th>
-        <th>Room B</th>
-        <th>Room C</th>
-        <th>Room D</th>
+        <th>Omah Lor</th> 
+        <th>Omah Kidul</th>
+        <th>Omah Wetan</th>
+        <th>Omah Kulon</th>
       </tr>
     </thead>
     <tbody>
@@ -45,9 +45,6 @@
   </table>
 
   <script>
-    // ---------------------------------------------------------
-    // 1. REPLACE THIS URL WITH YOUR ACTUAL GOOGLE SCRIPT URL
-    // ---------------------------------------------------------
     const API_URL = "https://script.google.com/macros/s/AKfycbwH1_S9bIQ8YtV5OihsxJknCXGuTmHTiU4Sk_7EW9jWT2QHFuTEZ0MGnRa7E1tOhzh1pQ/exec"; 
     
     let sheetData = [];
@@ -60,20 +57,18 @@
         loading.style.display = "inline";
         const res = await fetch(API_URL);
         
-        // Debugging: Check what the API actually returned
         const json = await res.json();
         console.log("API Response:", json); 
 
-        // 2. FIXED: Handle different JSON structures (Array vs Object)
         sheetData = Array.isArray(json) ? json : json.data;
 
         if(!sheetData) {
-            console.error("Could not find data array. Check console for structure.");
+            console.error("Could not find data array.");
             tbody.innerHTML = "<tr><td colspan='6'>Error loading data format</td></tr>";
             return;
         }
 
-        renderTable(sheetData); // Render all data initially
+        renderTable(sheetData); 
       } catch (error) {
         console.error("Fetch error:", error);
         tbody.innerHTML = "<tr><td colspan='6'>Error connecting to Google Sheet</td></tr>";
@@ -83,9 +78,8 @@
     }
 
     function getStatusCell(value) {
-      // Normalize to string to avoid errors if value is numbers
-      const valStr = String(value).toLowerCase().trim();
-      if (!value || valStr === "" || valStr === "null") return "Available";
+      const valStr = String(value || "").toLowerCase().trim();
+      if (valStr === "" || valStr === "null" || valStr === "undefined") return "Available";
       return "Booked";
     }
 
@@ -103,26 +97,27 @@
       }
 
       data.forEach(row => {
-        // 3. FIXED: Using bracket notation based on likely Header Names
-        // CAUTION: Ensure your Google Sheet Headers match these EXACTLY (or use lowercase)
-        // I am trying both "Room A" and "room a" just in case.
-        const roomA = getStatusCell(row["Omah Lor"] || row["omah lor"]);
-        const roomB = getStatusCell(row["Omah Kidul"] || row["omah kidul"]);
-        const roomC = getStatusCell(row["Omah Wetan"] || row["omah wetan"]);
-        const roomD = getStatusCell(row["Omah Kulon"] || row["omah kulon"]);
+        // --- API DATA MAPPING ---
+        // Assuming the Google Sheet headers are still "Room A", "Room B", etc.
+        // We look for both capitalized and lowercase versions for safety.
+        const omahLor = getStatusCell(row["Room A"] || row["room a"]);
+        const omahKidul = getStatusCell(row["Room B"] || row["room b"]);
+        const omahWetan = getStatusCell(row["Room C"] || row["room c"]);
+        const omahKulon = getStatusCell(row["Room D"] || row["room d"]);
+        // ------------------------
 
         const tr = document.createElement("tr");
         
-        // Format date nicely
-        const displayDate = new Date(row.date).toLocaleDateString();
+        let displayDate = row.date;
+        try { displayDate = new Date(row.date).toLocaleDateString(); } catch(e) {}
 
         tr.innerHTML = `
-          <td>${row.date}</td>
+          <td>${displayDate}</td>
           <td>${row.season || row.Season || '-'}</td>
-          <td class="${getClass(roomA)}">${roomA}</td>
-          <td class="${getClass(roomB)}">${roomB}</td>
-          <td class="${getClass(roomC)}">${roomC}</td>
-          <td class="${getClass(roomD)}">${roomD}</td>
+          <td class="${getClass(omahLor)}">${omahLor}</td>
+          <td class="${getClass(omahKidul)}">${omahKidul}</td>
+          <td class="${getClass(omahWetan)}">${omahWetan}</td>
+          <td class="${getClass(omahKulon)}">${omahKulon}</td>
         `;
         tbody.appendChild(tr);
       });
@@ -137,23 +132,17 @@
         return;
       }
 
-      // Convert inputs to Date objects (set to midnight to ensure clean comparison)
       const startDate = new Date(checkin);
       const endDate = new Date(checkout);
 
       const filtered = sheetData.filter(row => {
         const rowDate = new Date(row.date);
-        
-        // 4. FIXED: Logic change.
-        // We want dates GREATER/EQUAL to checkin AND STRICTLY LESS than checkout.
-        // (You don't need the room ON the checkout day).
         return rowDate >= startDate && rowDate < endDate;
       });
 
       renderTable(filtered);
     }
 
-    // UX: Set minimum dates
     document.getElementById("checkin").addEventListener("change", function () {
       const checkinDate = this.value;
       const checkout = document.getElementById("checkout");
