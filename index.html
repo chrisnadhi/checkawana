@@ -195,7 +195,7 @@ function renderTable(list) {
   }
 
   list.forEach(row => {
-    const d = row._dateObj.toLocaleDateString();
+    const d = formatTanggalIndo(row._dateObj);
 
     const lor   = getStatusCell(get("omah lor",   row));
     const kidul = getStatusCell(get("omah kidul", row));
@@ -293,6 +293,21 @@ document.getElementById("checkin").addEventListener("change", function () {
   checkout.min = minDate.toISOString().split("T")[0];
 });
 
+/* ------------------------------------------------------------------
+   8. FRIENDLY DATE
+------------------------------------------------------------------ */
+function formatTanggalIndo(dateObj) {
+  const bulan = [
+    "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+    "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+  ];
+  
+  const d = dateObj.getDate();
+  const m = bulan[dateObj.getMonth()];
+  return `${d} ${m}`;
+}
+
+  
 /* ------------------------------------------------------------------
    9. BUTTON CLICK HANDLER
 ------------------------------------------------------------------ */
