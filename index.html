@@ -50,25 +50,16 @@
     let sheetData = [];
 
     /**
-     * Helper function to safely parse date strings from the Google Sheet API 
-     * which often return dates in a format like "12/01/2025" instead of YYYY-MM-DD.
-     * This ensures the Date constructor works correctly.
+     * Helper function to safely parse the YYYY-MM-DD date format.
      */
     function parseSheetDate(dateString) {
       if (!dateString) return null;
-      // Try to recognize common formats (MM/DD/YYYY or DD/MM/YYYY)
-      const parts = dateString.split(/[-\/]/);
       
-      // Assuming the API returns MM/DD/YYYY format. If your API returns DD/MM/YYYY, 
-      // you will need to swap the first two elements: new Date(parts[2], parts[1] - 1, parts[0]);
-      if (parts.length === 3) {
-          // Date constructor: year, month (0-indexed), day
-          return new Date(parts[2], parts[0] - 1, parts[1]); 
-      }
+      // Use YYYY-MM-DD format (ISO 8601) - reliably parsed by JS.
+      const date = new Date(dateString); 
       
-      // Fallback for standard ISO formats
-      const standardDate = new Date(dateString);
-      return isNaN(standardDate) ? null : standardDate;
+      // Check if the date is valid
+      return isNaN(date.getTime()) ? null : date;
     }
 
     async function loadData() {
@@ -82,13 +73,13 @@
         
         sheetData = Array.isArray(json) ? json : json.data;
 
-        if(!sheetData) {
-            console.error("Could not find data array.");
-            tbody.innerHTML = "<tr><td colspan='6'>Error loading data format</td></tr>";
+        if(!sheetData || sheetData.length === 0) {
+            console.error("No data found or error loading data format.");
+            tbody.innerHTML = "<tr><td colspan='6'>No data available from the source.</td></tr>";
         }
       } catch (error) {
         console.error("Fetch error:", error);
-        tbody.innerHTML = "<tr><td colspan='6'>Error connecting to Google Sheet</td></tr>";
+        tbody.innerHTML = "<tr><td colspan='6'>Error connecting to Google Sheet.</td></tr>";
       } finally {
         loading.style.display = "none";
       }
@@ -114,7 +105,7 @@
       }
 
       data.forEach(row => {
-        // --- Data Mapping ---
+        // --- Data Mapping (assuming Sheet Headers are Room A, B, C, D) ---
         const omahLor = getStatusCell(row["Room A"] || row["room a"]);
         const omahKidul = getStatusCell(row["Room B"] || row["room b"]);
         const omahWetan = getStatusCell(row["Room C"] || row["room c"]);
@@ -122,16 +113,16 @@
 
         const tr = document.createElement("tr");
         
-        // --- Date Display Fix ---
+        // --- Date Display ---
         let displayDate = row.date;
         const rowDateObj = parseSheetDate(row.date);
         
         if (rowDateObj) {
-            // Display the date in the local format (e.g., 12/1/2025)
+            // Display date using local format (e.g., 12/01/2025)
             displayDate = rowDateObj.toLocaleDateString(); 
         } else {
-            // Show error message if date couldn't be parsed
-            displayDate = `ERROR: ${row.date}`;
+            // Fallback display if parsing failed
+            displayDate = row.date; 
         }
         // ------------------------
 
@@ -156,18 +147,16 @@
         return;
       }
 
-      // Input dates are in YYYY-MM-DD format, which is easily parsed
+      // Check-in and Check-out inputs are already in YYYY-MM-DD and are reliably parsed
       const startDate = new Date(checkinValue);
       const endDate = new Date(checkoutValue);
 
       const filtered = sheetData.filter(row => {
-        // --- Filtering Fix ---
         const rowDate = parseSheetDate(row.date);
         
-        // Skip filtering if the date could not be parsed
         if (!rowDate) return false; 
 
-        // Compare timestamps
+        // Compare dates (Check-in INCLUDED, Check-out EXCLUDED)
         return rowDate.getTime() >= startDate.getTime() && rowDate.getTime() < endDate.getTime();
       });
 
