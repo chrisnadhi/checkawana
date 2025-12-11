@@ -1,192 +1,305 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>Villa Availability Checker</title>
-  <style>
-    body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: auto; }
-    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-    th, td { padding: 10px; border: 1px solid #ccc; text-align: center; }
-    .available { background: #c6f7d0; color: #006400; font-weight: bold; }
-    .booked { background: #ffbfbf; color: #8b0000; }
-    input, button { padding: 10px; margin-right: 10px; margin-bottom: 10px; }
-    button { cursor: pointer; background-color: #007bff; color: white; border: none; border-radius: 4px; }
-    button:hover { background-color: #0056b3; }
-    #loading { display: none; color: #666; font-style: italic; }
-  </style>
+<meta charset="UTF-8">
+<title>Awana House Villa Availability Checker</title>
+
+<style>
+  body { 
+    font-family: Arial, sans-serif; 
+    padding: 20px; 
+    max-width: 900px; 
+    margin: auto; 
+  }
+
+  h2 {
+    margin-bottom: 8px;
+  }
+
+  .field-group {
+    margin-bottom: 20px;
+  }
+
+  input, button {
+    padding: 10px;
+    margin-right: 10px;
+  }
+
+  button {
+    cursor: pointer; 
+    background-color: #007bff;
+    border: none;
+    color: white;
+    border-radius: 5px;
+    padding: 10px 18px;
+  }
+
+  button:hover {
+    background-color: #0056b3;
+  }
+
+  #loading {
+    display: none;
+    font-style: italic;
+    color: #666;
+  }
+
+  #summaryBox {
+    margin-top: 18px;
+    padding: 12px;
+    border-radius: 6px;
+    background: #f8f8f8;
+    display: none;
+  }
+
+  .status-available { color: #006400; font-weight: bold; }
+  .status-booked { color: #8b0000; font-weight: bold; }
+
+  table {
+    width: 100%; 
+    border-collapse: collapse; 
+    margin-top: 20px;
+  }
+
+  th, td {
+    padding: 10px; 
+    border: 1px solid #ddd; 
+    text-align: center;
+  }
+
+  .available { background: #c6f7d0; color: #006400; font-weight: bold; }
+  .booked { background: #ffbfbf; color: #8b0000; }
+
+  #whatsappBtn {
+    margin-top: 15px;
+    padding: 12px;
+    background: #25d366;
+    color: white;
+    border-radius: 6px;
+    display: none;
+    text-decoration: none;
+    font-weight: bold;
+  }
+</style>
 </head>
+
 <body>
 
-  <h2>Villa Availability Checker</h2>
+<h2>Villa Availability Checker</h2>
 
-  <label>Check-in: </label>
+<div class="field-group">
+  <label>Check-in:</label>
   <input type="date" id="checkin">
 
-  <label>Check-out: </label>
+  <label>Check-out:</label>
   <input type="date" id="checkout">
 
   <button id="checkBtn">Check Availability</button>
   <span id="loading">Loading data...</span>
+</div>
 
-  <table id="availabilityTable">
-    <thead>
-      <tr>
-        <th>Date</th>
-        <th>Season</th>
-        <th>Omah Lor</th> 
-        <th>Omah Kidul</th>
-        <th>Omah Wetan</th>
-        <th>Omah Kulon</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr><td colspan="6">Please select your check-in and check-out dates and click "Check Availability".</td></tr>
-    </tbody>
-  </table>
+<div id="summaryBox"></div>
+<a id="whatsappBtn" target="_blank">Book via WhatsApp</a>
 
-  <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbwH1_S9bIQ8YtV5OihsxJknCXGuTmHTiU4Sk_7EW9jWT2QHFuTEZ0MGnRa7E1tOhzh1pQ/exec"; 
-    
-    let sheetData = [];
+<table id="availabilityTable">
+  <thead>
+    <tr>
+      <th>Date</th>
+      <th>Season</th>
+      <th>Omah Lor</th>
+      <th>Omah Kidul</th>
+      <th>Omah Wetan</th>
+      <th>Omah Kulon</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td colspan="6">Please select dates and click "Check Availability".</td></tr>
+  </tbody>
+</table>
 
-    /**
-     * Membuat objek Date yang dinormalisasi (tengah malam waktu lokal) dari string YYYY-MM-DD.
-     */
-    function normalizeDate(dateString) {
-      if (!dateString) return null;
-      const parts = dateString.split('-');
-      if (parts.length !== 3) return null;
+<script>
+const API_URL = "YOUR_GOOGLE_APPS_SCRIPT_WEBAPP_URL";
+let sheetData = [];
 
-      // Membuat objek Date menggunakan komponen waktu lokal (Tahun, Bulan-1, Hari)
-      const date = new Date(parts[0], parts[1] - 1, parts[2]); 
-      
-      return isNaN(date.getTime()) ? null : date;
-    }
+/* ------------------------------------------------------------------
+   1. UNIVERSAL COLUMN NORMALIZER (Auto-detects correct column name)
+------------------------------------------------------------------ */
+function get(field, row) {
+  if (!row) return null;
+  const target = field.trim().toLowerCase();
+  for (const key of Object.keys(row)) {
+    if (key.trim().toLowerCase() === target) return row[key];
+  }
+  return null;
+}
 
-    async function loadData() {
-      const loading = document.getElementById("loading");
-      const tbody = document.querySelector("#availabilityTable tbody");
-      
-      try {
-        loading.style.display = "inline";
-        const res = await fetch(API_URL);
-        const json = await res.json();
-        
-        sheetData = Array.isArray(json) ? json : json.data;
+/* ------------------------------------------------------------------
+   2. NORMALIZE DATE FROM SHEET + FROM USER INPUT
+------------------------------------------------------------------ */
+function normalizeDate(str) {
+  if (!str) return null;
+  const parts = String(str).split("-");
+  if (parts.length !== 3) return null;
+  return new Date(parts[0], parts[1]-1, parts[2]); 
+}
 
-        if(!sheetData || sheetData.length === 0) {
-            console.error("No data found or error loading data format.");
-            // Pesan ini hanya muncul jika Gagal koneksi/data kosong
-        }
-      } catch (error) {
-        console.error("Fetch error:", error);
-        tbody.innerHTML = "<tr><td colspan='6'>Error connecting to Google Sheet.</td></tr>";
-      } finally {
-        loading.style.display = "none";
-      }
-    }
+/* ------------------------------------------------------------------
+   3. LOAD + PREPROCESS DATA (FAST)
+------------------------------------------------------------------ */
+async function loadData() {
+  const loading = document.getElementById("loading");
+  loading.style.display = "inline";
 
-    function getStatusCell(value) {
-      const valStr = String(value || "").toLowerCase().trim();
-      if (valStr === "" || valStr === "null" || valStr === "undefined") return "Available";
-      return "Booked";
-    }
+  try {
+    const res = await fetch(API_URL);
+    const json = await res.json();
 
-    function getClass(status) {
-      return status === "Available" ? "available" : "booked";
-    }
-
-    function renderTable(data) {
-      const tbody = document.querySelector("#availabilityTable tbody");
-      tbody.innerHTML = "";
-
-      if (data.length === 0) {
-        tbody.innerHTML = "<tr><td colspan='6'>No dates found in this range.</td></tr>";
-        return;
-      }
-
-      data.forEach(row => {
-        // --- Data Mapping ---
-        const omahLor = getStatusCell(row["Room A"] || row["room a"]);
-        const omahKidul = getStatusCell(row["Room B"] || row["room b"]);
-        const omahWetan = getStatusCell(row["Room C"] || row["room c"]);
-        const omahKulon = getStatusCell(row["Room D"] || row["room d"]);
-
-        const tr = document.createElement("tr");
-        
-        // --- Tampilan Tanggal DENGAN PERBAIKAN PANGGILAN PROPERTY ---
-        // Mencoba row.date ATAU row.Date untuk menghindari 'undefined'
-        const rowDateData = row.date || row.Date; 
-        let displayDate = rowDateData;
-        const rowDateObj = normalizeDate(rowDateData);
-        
-        if (rowDateObj) {
-            displayDate = rowDateObj.toLocaleDateString(); 
-        } 
-        // ------------------------
-
-        tr.innerHTML = `
-          <td>${displayDate}</td>
-          <td>${row.season || row.Season || '-'}</td>
-          <td class="${getClass(omahLor)}">${omahLor}</td>
-          <td class="${getClass(omahKidul)}">${omahKidul}</td>
-          <td class="${getClass(omahWetan)}">${omahWetan}</td>
-          <td class="${getClass(omahKulon)}">${omahKulon}</td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
-
-    function filterByDateRange() {
-      const checkinValue = document.getElementById("checkin").value;
-      const checkoutValue = document.getElementById("checkout").value;
-
-      if (!checkinValue || !checkoutValue) {
-        alert("Please select both check-in and check-out dates.");
-        return;
-      }
-
-      // Normalisasi tanggal input
-      const startDate = normalizeDate(checkinValue);
-      const endDate = normalizeDate(checkoutValue); 
-
-      if (!startDate || !endDate) {
-          alert("Error parsing selected dates. Please check date inputs.");
-          return;
-      }
-
-      const filtered = sheetData.filter(row => {
-        // --- FILTER DENGAN PERBAIKAN PANGGILAN PROPERTY ---
-        const rowDateData = row.date || row.Date;
-        const rowDate = normalizeDate(rowDateData);
-        
-        if (!rowDate) return false; 
-
-        // Perbandingan tanggal: Check-in TERMASUK, Check-out TIDAK TERMASUK
-        return rowDate.getTime() >= startDate.getTime() && rowDate.getTime() < endDate.getTime();
-      });
-
-      renderTable(filtered);
-    }
-
-    document.getElementById("checkin").addEventListener("change", function () {
-      const checkinDate = this.value;
-      const checkout = document.getElementById("checkout");
-
-      let minDate = new Date(checkinDate);
-      minDate.setDate(minDate.getDate() + 1);
-
-      checkout.min = minDate.toISOString().split("T")[0];
-
-      if (checkout.value && checkout.value <= checkinDate) {
-        checkout.value = "";
-      }
+    sheetData = (json.data || json).map(row => {
+      const rawDate = get("date", row);
+      return {
+        ...row,
+        _dateObj: normalizeDate(rawDate)
+      };
     });
 
-    // EVENT LISTENER HANYA ADA DI SINI (TOMBOL)
-    document.getElementById("checkBtn").addEventListener("click", filterByDateRange);
+  } catch (err) {
+    alert("Error loading Google Sheet. Please try again.");
+  }
 
-    loadData();
-  </script>
+  loading.style.display = "none";
+}
+
+/* ------------------------------------------------------------------
+   4. BOOKED / AVAILABLE LOGIC
+------------------------------------------------------------------ */
+function getStatusCell(val) {
+  if (!val) return "Available";
+  if (String(val).trim() === "") return "Available";
+  return "Booked";
+}
+
+function getClass(status) {
+  return status === "Available" ? "available" : "booked";
+}
+
+/* ------------------------------------------------------------------
+   5. RENDER RESULT TABLE
+------------------------------------------------------------------ */
+function renderTable(list) {
+  const tbody = document.querySelector("#availabilityTable tbody");
+  tbody.innerHTML = "";
+
+  if (list.length === 0) {
+    tbody.innerHTML = "<tr><td colspan='6'>No dates in range.</td></tr>";
+    return;
+  }
+
+  list.forEach(row => {
+    const d = row._dateObj.toLocaleDateString();
+
+    const lor   = getStatusCell(get("omah lor",   row));
+    const kidul = getStatusCell(get("omah kidul", row));
+    const wetan = getStatusCell(get("omah wetan", row));
+    const kulon = getStatusCell(get("omah kulon", row));
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${d}</td>
+      <td>${get("season", row) || "-"}</td>
+      <td class="${getClass(lor)}">${lor}</td>
+      <td class="${getClass(kidul)}">${kidul}</td>
+      <td class="${getClass(wetan)}">${wetan}</td>
+      <td class="${getClass(kulon)}">${kulon}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+/* ------------------------------------------------------------------
+   6. SUMMARIZE ROOM STATUS
+------------------------------------------------------------------ */
+function showSummary(results) {
+  if (results.length === 0) {
+    document.getElementById("summaryBox").style.display = "none";
+    document.getElementById("whatsappBtn").style.display = "none";
+    return;
+  }
+
+  let lor   = "Available",
+      kidul = "Available",
+      wetan = "Available",
+      kulon = "Available";
+
+  results.forEach(r => {
+    if (getStatusCell(get("omah lor", r))   === "Booked") lor = "Booked";
+    if (getStatusCell(get("omah kidul", r)) === "Booked") kidul = "Booked";
+    if (getStatusCell(get("omah wetan", r)) === "Booked") wetan = "Booked";
+    if (getStatusCell(get("omah kulon", r)) === "Booked") kulon = "Booked";
+  });
+
+  const box = document.getElementById("summaryBox");
+  box.style.display = "block";
+  box.innerHTML = `
+    <strong>Availability Summary:</strong><br>
+    Omah Lor: <span class="status-${lor.toLowerCase()}">${lor}</span><br>
+    Omah Kidul: <span class="status-${kidul.toLowerCase()}">${kidul}</span><br>
+    Omah Wetan: <span class="status-${wetan.toLowerCase()}">${wetan}</span><br>
+    Omah Kulon: <span class="status-${kulon.toLowerCase()}">${kulon}</span>
+  `;
+
+  // Show WhatsApp button with filled date range
+  const checkin = document.getElementById("checkin").value;
+  const checkout = document.getElementById("checkout").value;
+  const wa = document.getElementById("whatsappBtn");
+
+  wa.href = `https://wa.me/6281234567890?text=Saya%20ingin%20booking%20Villa%20Awana%20dari%20${checkin}%20sampai%20${checkout}`;
+  wa.style.display = "inline-block";
+}
+
+/* ------------------------------------------------------------------
+   7. FILTER DATE RANGE
+------------------------------------------------------------------ */
+function filterByDateRange() {
+  const cin = document.getElementById("checkin").value;
+  const cout = document.getElementById("checkout").value;
+
+  if (!cin || !cout) {
+    alert("Please select both check-in and check-out.");
+    return;
+  }
+
+  const start = normalizeDate(cin);
+  const end = normalizeDate(cout);
+
+  const results = sheetData.filter(row => {
+    if (!row._dateObj) return false;
+    return row._dateObj >= start && row._dateObj < end; 
+  });
+
+  renderTable(results);
+  showSummary(results);
+}
+
+/* ------------------------------------------------------------------
+   8. CHECKOUT DATE LIMIT
+------------------------------------------------------------------ */
+document.getElementById("checkin").addEventListener("change", function () {
+  const checkinDate = this.value;
+  const checkout = document.getElementById("checkout");
+
+  let minDate = new Date(checkinDate);
+  minDate.setDate(minDate.getDate() + 1);
+
+  checkout.min = minDate.toISOString().split("T")[0];
+});
+
+/* ------------------------------------------------------------------
+   9. BUTTON CLICK HANDLER
+------------------------------------------------------------------ */
+document.getElementById("checkBtn").addEventListener("click", filterByDateRange);
+
+loadData();
+</script>
+
 </body>
 </html>
