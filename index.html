@@ -41,14 +41,23 @@
 
   <script>
     const API_URL = "https://script.google.com/macros/s/AKfycbwH1_S9bIQ8YtV5OihsxJknCXGuTmHTiU4Sk_7EW9jWT2QHFuTEZ0MGnRa7E1tOhzh1pQ/exec";
-
-    // Load data on start
     let sheetData = [];
 
+    // Load sheet data once
     async function loadData() {
       const res = await fetch(API_URL);
       const json = await res.json();
       sheetData = json.data;
+    }
+
+    // Interpret empty cell as available / non-empty as booked
+    function getStatusCell(value) {
+      if (value === "" || value === null) return "Available";
+      return "Booked";
+    }
+
+    function getClass(status) {
+      return status === "Available" ? "available" : "booked";
     }
 
     function renderTable(data) {
@@ -61,47 +70,11 @@
       }
 
       data.forEach(row => {
-        const tr = document.createElement("tr");
+        const roomA = getStatusCell(row["room a"]);
+        const roomB = getStatusCell(row["room b"]);
+        const roomC = getStatusCell(row["room c"]);
+        const roomD = getStatusCell(row["room d"]);
 
+        const tr = document.createElement("tr");
         tr.innerHTML = `
           <td>${row.date}</td>
-          <td>${row.season}</td>
-          <td class="${getClass(row['room a'])}">${row['room a']}</td>
-          <td class="${getClass(row['room b'])}">${row['room b']}</td>
-          <td class="${getClass(row['room c'])}">${row['room c']}</td>
-          <td class="${getClass(row['room d'])}">${row['room d']}</td>
-        `;
-
-        tbody.appendChild(tr);
-      });
-    }
-
-    function getClass(status) {
-      if (!status) return "";
-      return status.toLowerCase().includes("available") ? "available" : "booked";
-    }
-
-    function filterByDateRange() {
-      const checkin = document.getElementById("checkin").value;
-      const checkout = document.getElementById("checkout").value;
-
-      if (!checkin || !checkout) {
-        alert("Please select both check-in and check-out dates.");
-        return;
-      }
-
-      const filtered = sheetData.filter(row => {
-        const rowDate = new Date(row.date);
-        return rowDate >= new Date(checkin) && rowDate <= new Date(checkout);
-      });
-
-      renderTable(filtered);
-    }
-
-    document.getElementById("checkBtn").addEventListener("click", filterByDateRange);
-
-    loadData();
-  </script>
-
-</body>
-</html>
