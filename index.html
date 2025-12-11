@@ -112,10 +112,10 @@
 
       data.forEach(row => {
         // --- Data Mapping ---
-        const omahLor = getStatusCell(row["Room A"] || row["room a"]);
-        const omahKidul = getStatusCell(row["Room B"] || row["room b"]);
-        const omahWetan = getStatusCell(row["Room C"] || row["room c"]);
-        const omahKulon = getStatusCell(row["Room D"] || row["room d"]);
+        const omahLor = getStatusCell(row["Omah Lor"] || row["room a"]);
+        const omahKidul = getStatusCell(row["Omah Kidul"] || row["room b"]);
+        const omahWetan = getStatusCell(row["Omah Wetan"] || row["room c"]);
+        const omahKulon = getStatusCell(row["Omah Kulon"] || row["room d"]);
 
         const tr = document.createElement("tr");
         
