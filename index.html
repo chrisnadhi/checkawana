@@ -30,10 +30,10 @@
       <tr>
         <th>Date</th>
         <th>Season</th>
-        <th>Omah Lor</th>
-        <th>Omah Kidul</th>
-        <th>Omah Wetan</th>
-        <th>Omah Kulon</th>
+        <th>Room A</th>
+        <th>Room B</th>
+        <th>Room C</th>
+        <th>Room D</th>
       </tr>
     </thead>
     <tbody></tbody>
@@ -41,23 +41,14 @@
 
   <script>
     const API_URL = "https://script.google.com/macros/s/AKfycbwH1_S9bIQ8YtV5OihsxJknCXGuTmHTiU4Sk_7EW9jWT2QHFuTEZ0MGnRa7E1tOhzh1pQ/exec";
+
+    // Load data on start
     let sheetData = [];
 
-    // Load sheet data once
     async function loadData() {
       const res = await fetch(API_URL);
       const json = await res.json();
       sheetData = json.data;
-    }
-
-    // Interpret empty cell as available / non-empty as booked
-    function getStatusCell(value) {
-      if (value === "" || value === null) return "Available";
-      return "Booked";
-    }
-
-    function getClass(status) {
-      return status === "Available" ? "available" : "booked";
     }
 
     function renderTable(data) {
@@ -70,11 +61,47 @@
       }
 
       data.forEach(row => {
-        const roomA = getStatusCell(row["Omah Lor"]);
-        const roomB = getStatusCell(row["Omah Kidul"]);
-        const roomC = getStatusCell(row["Omah Wetan"]);
-        const roomD = getStatusCell(row["Omah Kulon"]);
-
         const tr = document.createElement("tr");
+
         tr.innerHTML = `
           <td>${row.date}</td>
+          <td>${row.season}</td>
+          <td class="${getClass(row['room a'])}">${row['Omah Lor']}</td>
+          <td class="${getClass(row['room b'])}">${row['Omah Kidul']}</td>
+          <td class="${getClass(row['room c'])}">${row['Omah Wetan']}</td>
+          <td class="${getClass(row['room d'])}">${row['Omah Kulon']}</td>
+        `;
+
+        tbody.appendChild(tr);
+      });
+    }
+
+    function getClass(status) {
+      if (!status) return "";
+      return status.toLowerCase().includes("available") ? "available" : "booked";
+    }
+
+    function filterByDateRange() {
+      const checkin = document.getElementById("checkin").value;
+      const checkout = document.getElementById("checkout").value;
+
+      if (!checkin || !checkout) {
+        alert("Please select both check-in and check-out dates.");
+        return;
+      }
+
+      const filtered = sheetData.filter(row => {
+        const rowDate = new Date(row.date);
+        return rowDate >= new Date(checkin) && rowDate <= new Date(checkout);
+      });
+
+      renderTable(filtered);
+    }
+
+    document.getElementById("checkBtn").addEventListener("click", filterByDateRange);
+
+    loadData();
+  </script>
+
+</body>
+</html>
