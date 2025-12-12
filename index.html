@@ -42,7 +42,20 @@ input[type="date"]::-webkit-calendar-picker-indicator {
       border: 1px solid #ccc;
       width: 100%;
     }
-
+input[type="date"]:first-child:before {
+    content: "check-in";
+    position: absolute;
+    top: 6px;
+    left: 24px;
+    font-size: 14px;
+}
+input[type="date"]:last-child:before {
+    content: "check-out";
+    position: absolute;
+    top: 6px;
+    left: 24px;
+    font-size: 14px;
+}
     button {
       background: #007bff;
       color: white;
