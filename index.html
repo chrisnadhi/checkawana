@@ -222,14 +222,19 @@ function formatHumanDate(dateString) {
   return `${days[d.getDay()]}, ${d.getDate()} ${months[d.getMonth()]}`;
 }
 
+
+
+/* Fetch data + enable button after loaded */
 async function loadData() {
-  document.getElementById("loading").style.display = "block";
+  const checkBtn = document.getElementById("checkBtn");
 
   try {
     const res = await fetch(API_URL);
     const json = await res.json();
 
-    sheetData = json.data; // correct based on your output
+    sheetData = json.data;
+
+    checkBtn.classList.add("enabled");
   } catch (err) {
     console.error("Fetch error:", err);
     document.querySelector("#availabilityTable tbody").innerHTML =
