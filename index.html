@@ -293,13 +293,22 @@ function filterByDate() {
 document.getElementById("checkBtn").addEventListener("click", filterByDate);
 
 document.getElementById("checkin").addEventListener("change", function () {
-  const minCheckout = new Date(this.value);
-  minCheckout.setDate(minCheckout.getDate() + 1);
-
+  const checkinDate = new Date(this.value);
   const checkout = document.getElementById("checkout");
-  checkout.min = minCheckout.toISOString().split("T")[0];
 
-  if (checkout.value && checkout.value <= this.value) {
+  // Minimum checkout = next day
+  const minDate = new Date(checkinDate);
+  minDate.setDate(minDate.getDate() + 1);
+
+  // Maximum checkout = check-in + 14 days
+  const maxDate = new Date(checkinDate);
+  maxDate.setDate(maxDate.getDate() + 14);
+
+  checkout.min = minDate.toISOString().split("T")[0];
+  checkout.max = maxDate.toISOString().split("T")[0];
+
+  // Reset checkout if outside new limits
+  if (checkout.value && (checkout.value < checkout.min || checkout.value > checkout.max)) {
     checkout.value = "";
   }
 });
