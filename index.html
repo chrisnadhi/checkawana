@@ -86,6 +86,56 @@
         padding: 6px;
       }
     }
+
+    @media screen and (max-width: 600px) {
+  table {
+    border: 0;
+  }
+
+  table caption {
+    font-size: 1.3em;
+  }
+  
+  table thead {
+    border: none;
+    clip: rect(0 0 0 0);
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    padding: 0;
+    position: absolute;
+    width: 1px;
+  }
+  
+  table tr {
+    border-bottom: 3px solid #ddd;
+    display: block;
+    margin-bottom: .625em;
+  }
+  
+  table td {
+    border-bottom: 1px solid #ddd;
+    display: block;
+    font-size: .8em;
+    text-align: right;
+  }
+  
+  table td::before {
+    /*
+    * aria-label has no advantage, it won't be read inside a table
+    content: attr(aria-label);
+    */
+    content: attr(data-label);
+    float: left;
+    font-weight: bold;
+    text-transform: uppercase;
+  }
+  
+  table td:last-child {
+    border-bottom: 0;
+  }
+}
+
   </style>
 </head>
 <body>
@@ -103,12 +153,12 @@
   <table id="availabilityTable">
     <thead>
       <tr>
-        <th>Date</th>
-        <th>Season</th>
-        <th>Omah Lor</th>
-        <th>Omah Kidul</th>
-        <th>Omah Wetan</th>
-        <th>Omah Kulon</th>
+        <th scope="col">Date</th>
+        <th scope="col">Season</th>
+        <th scope="col">Omah Lor</th>
+        <th scope="col">Omah Kidul</th>
+        <th scope="col">Omah Wetan</th>
+        <th scope="col">Omah Kulon</th>
       </tr>
     </thead>
     <tbody>
@@ -179,12 +229,12 @@ function renderTable(filtered) {
     const tr = document.createElement("tr");
 
     tr.innerHTML = `
-      <td>${formatHumanDate(row.date)}</td>
-      <td>${row.Season || "-"}</td>
-      <td class="${checkStatus(row["Omah Lor"]).toLowerCase()}">${checkStatus(row["Omah Lor"])}</td>
-      <td class="${checkStatus(row["Omah Kidul"]).toLowerCase()}">${checkStatus(row["Omah Kidul"])}</td>
-      <td class="${checkStatus(row["Omah Wetan"]).toLowerCase()}">${checkStatus(row["Omah Wetan"])}</td>
-      <td class="${checkStatus(row["Omah Kulon"]).toLowerCase()}">${checkStatus(row["Omah Kulon"])}</td>
+      <td data-label="Date">${formatHumanDate(row.date)}</td>
+      <td data-label="Season">${row.Season || "-"}</td>
+      <td data-label="Omah Lor" class="${checkStatus(row["Omah Lor"]).toLowerCase()}">${checkStatus(row["Omah Lor"])}</td>
+      <td data-label="Omah Kidul" class="${checkStatus(row["Omah Kidul"]).toLowerCase()}">${checkStatus(row["Omah Kidul"])}</td>
+      <td data-label="Omah Wetan" class="${checkStatus(row["Omah Wetan"]).toLowerCase()}">${checkStatus(row["Omah Wetan"])}</td>
+      <td data-label="Omah Kulon" class="${checkStatus(row["Omah Kulon"]).toLowerCase()}">${checkStatus(row["Omah Kulon"])}</td>
     `;
 
     tbody.appendChild(tr);
