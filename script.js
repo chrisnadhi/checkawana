@@ -76,6 +76,35 @@ function renderTable(filtered) {
   });
 }
 
+// --- Function to wrap available text with a link ---
+function wrapAvailableLinks() {
+  const BOOKING_LINK = "https://wa.me/6281234567890?text=Halo,%20saya%20tertarik%20untuk%20memesan%20Awana%20Farmhouse%20Dieng."; // REPLACE THIS LINK
+
+  // Select all <td> elements with the class 'available'
+  document.querySelectorAll('td.available').forEach(td => {
+    
+    // Get the current text content (which should be "Available")
+    const statusText = td.textContent;
+    
+    // Create the new anchor element (<a>)
+    const link = document.createElement('a');
+    link.href = BOOKING_LINK;
+    link.target = "_blank";
+    
+    // Copy the original text into the link
+    link.textContent = statusText; 
+    
+    // Apply styling to ensure it looks like the status, not a default link
+    link.style.textDecoration = 'none';
+    link.style.color = 'inherit';
+    link.style.display = 'block'; // Make the link fill the cell
+
+    // Clear the original content and insert the new link
+    td.textContent = '';
+    td.appendChild(link);
+  });
+}
+
 function filterByDate() {
   const ci = document.getElementById("checkin").value;
   const co = document.getElementById("checkout").value;
