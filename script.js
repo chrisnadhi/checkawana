@@ -47,7 +47,7 @@ async function loadData() {
 
 function checkStatus(val) {
   return (val === "" || val === null || val === undefined)
-    ? "Available"
+    ? "<a href='#'>Available</a>"
     : "Booked";
 }
 
