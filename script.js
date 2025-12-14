@@ -53,7 +53,7 @@ function checkStatus(val) {
 
 // --- Function to wrap available text with a link ---
 function wrapAvailableLinks() {
-  const BOOKING_LINK = "https://wa.me/6281234567890?text=Halo,%20saya%20tertarik%20untuk%20memesan%20Awana%20Farmhouse%20Dieng."; // REPLACE THIS LINK
+  const BOOKING_LINK = "https://wa.me/62811270677?text=Halo,%20saya%20tertarik%20untuk%20memesan%20Awana%20Farmhouse%20Dieng."; // REPLACE THIS LINK
 
   // Select all <td> elements with the class 'available'
   document.querySelectorAll('td.available').forEach(td => {
