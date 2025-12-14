@@ -45,9 +45,17 @@ async function loadData() {
   document.getElementById("loading").style.display = "none";
 }
 
+// function checkStatus(val) {
+//   return (val === "" || val === null || val === undefined)
+//     ? "Available"
+//     : "Booked";
+// }
+
 function checkStatus(val) {
+  const BOOKING_LINK = "https://wa.me/6281234567890"; // <-- REPLACE WITH YOUR ACTUAL LINK
+
   return (val === "" || val === null || val === undefined)
-    ? "<a href='#'>Available</a>"
+    ? `<a href="${BOOKING_LINK}" target="_blank" style="text-decoration: none; color: inherit;">Available</a>`
     : "Booked";
 }
 
