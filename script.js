@@ -51,31 +51,6 @@ function checkStatus(val) {
     : "Booked";
 }
 
-function renderTable(filtered) {
-  const tbody = document.querySelector("#availabilityTable tbody");
-  tbody.innerHTML = "";
-
-  if (filtered.length === 0) {
-    tbody.innerHTML = "<tr><td colspan='6'>No dates found.</td></tr>";
-    return;
-  }
-
-  filtered.forEach(row => {
-    const tr = document.createElement("tr");
-
-    tr.innerHTML = `
-      <td data-label="Date">${formatHumanDate(row.date)}</td>
-      <td data-label="Season">${row.Season || "-"}</td>
-      <td data-label="Omah Lor" class="${checkStatus(row["Omah Lor"]).toLowerCase()}">${checkStatus(row["Omah Lor"])}</td>
-      <td data-label="Omah Kidul" class="${checkStatus(row["Omah Kidul"]).toLowerCase()}">${checkStatus(row["Omah Kidul"])}</td>
-      <td data-label="Omah Wetan" class="${checkStatus(row["Omah Wetan"]).toLowerCase()}">${checkStatus(row["Omah Wetan"])}</td>
-      <td data-label="Omah Kulon" class="${checkStatus(row["Omah Kulon"]).toLowerCase()}">${checkStatus(row["Omah Kulon"])}</td>
-    `;
-
-    tbody.appendChild(tr);
-  });
-}
-
 // --- Function to wrap available text with a link ---
 function wrapAvailableLinks() {
   const BOOKING_LINK = "https://wa.me/6281234567890?text=Halo,%20saya%20tertarik%20untuk%20memesan%20Awana%20Farmhouse%20Dieng."; // REPLACE THIS LINK
@@ -103,6 +78,32 @@ function wrapAvailableLinks() {
     td.textContent = '';
     td.appendChild(link);
   });
+}
+
+function renderTable(filtered) {
+  const tbody = document.querySelector("#availabilityTable tbody");
+  tbody.innerHTML = "";
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = "<tr><td colspan='6'>No dates found.</td></tr>";
+    return;
+  }
+
+  filtered.forEach(row => {
+    const tr = document.createElement("tr");
+
+    tr.innerHTML = `
+      <td data-label="Date">${formatHumanDate(row.date)}</td>
+      <td data-label="Season">${row.Season || "-"}</td>
+      <td data-label="Omah Lor" class="${checkStatus(row["Omah Lor"]).toLowerCase()}">${checkStatus(row["Omah Lor"])}</td>
+      <td data-label="Omah Kidul" class="${checkStatus(row["Omah Kidul"]).toLowerCase()}">${checkStatus(row["Omah Kidul"])}</td>
+      <td data-label="Omah Wetan" class="${checkStatus(row["Omah Wetan"]).toLowerCase()}">${checkStatus(row["Omah Wetan"])}</td>
+      <td data-label="Omah Kulon" class="${checkStatus(row["Omah Kulon"]).toLowerCase()}">${checkStatus(row["Omah Kulon"])}</td>
+    `;
+
+    tbody.appendChild(tr);
+  });
+  wrapAvailableLinks();
 }
 
 function filterByDate() {
